@@ -1,8 +1,9 @@
 "use client";
 
-import { Artist } from "../data/artists";
 import { ArtistCard } from "./ArtistCard";
 import { GuessButtons } from "./GuessButtons";
+
+import { Artist } from "@/data/artists";
 
 interface GameLayoutProps {
   currentArtist: Artist;

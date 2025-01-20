@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Music2 } from "lucide-react";
 
-import { Artist } from "../data/artists";
+import { Artist } from "@/data/artists";
 
 interface ArtistCardProps {
   artist: Artist;
