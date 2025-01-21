@@ -1,12 +1,5 @@
 import SpotifyWebApi from "spotify-web-api-node";
 
-export interface SpotifyArtist {
-  name: string;
-  monthlyListeners: number;
-  imageUrl: string;
-  id: string;
-}
-
 const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
@@ -25,83 +18,84 @@ async function getAccessToken() {
     token = data.body.access_token;
     tokenExpirationTime = Date.now() + data.body.expires_in * 1000;
     spotifyApi.setAccessToken(token);
-    return getAccessToken;
+    return token;
   } catch (error) {
-    console.error("Error obteniendo el token de Spotify:", error);
+    console.error("Error getting Spotify access token:", error);
     throw error;
   }
 }
 
-async function getRandomPlaylistFromCategory(
-  categoryId: string
-): Promise<string> {
-  const playlists = await spotifyApi.getPlaylistsForCategory(categoryId, {
-    limit: 50,
-  });
-  const randomIndex = Math.floor(
-    Math.random() * playlists.body.playlists.items.length
-  );
-
-  return playlists.body.playlists.items[randomIndex].id;
+export interface SpotifyArtist {
+  name: string;
+  monthlyListeners: number;
+  imageUrl: string;
+  id: string;
 }
 
-export async function getTopArtists(): Promise<SpotifyArtist[]> {
+// List of search terms to get diverse artists
+const searchTerms = [
+  "pop",
+  "rock",
+  "hip hop",
+  "jazz",
+  "electronic",
+  "indie",
+  "latin",
+  "r&b",
+  "dance",
+  "alternative",
+];
+
+export async function getTopLatinArtists(): Promise<SpotifyArtist[]> {
   await getAccessToken();
 
   try {
-    // Get several categories
-    const categories = await spotifyApi.getCategories({
-      limit: 50,
-      country: "US",
-    });
-
-    const categoryIds = categories.body.categories.items.map(
-      (cat: any) => cat.id
-    );
-    const selectedCategories = [];
-
-    // Randomly select 3 categories
-    for (let i = 0; i < 3; i++) {
-      const randomIndex = Math.floor(Math.random() * categoryIds.length);
-      selectedCategories.push(categoryIds[randomIndex]);
-      categoryIds.splice(randomIndex, 1);
-    }
-
-    const artistIds = new Set<string>();
     const artists: SpotifyArtist[] = [];
+    const artistIds = new Set<string>();
 
-    // Get playlists from each selected category
-    for (const categoryId of selectedCategories) {
-      const playlistId = await getRandomPlaylistFromCategory(categoryId);
-      const playlist = await spotifyApi.getPlaylist(playlistId);
+    // Shuffle search terms
+    const shuffledTerms = [...searchTerms]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 5); // Use only 5 random terms
 
-      for (const item of playlist.body.tracks.items) {
-        const artist = item.track?.artists[0];
-        if (artist && !artistIds.has(artist.id)) {
-          artistIds.add(artist.id);
+    // Search artists for each term
+    for (const term of shuffledTerms) {
+      try {
+        const searchResults = await spotifyApi.searchArtists(term, {
+          limit: 10,
+          market: "ES",
+        });
 
-          const artistInfo = await spotifyApi.getArtist(artist.id);
-          // Only include artists with more than 100,000 followers to ensure they're well-known
+        for (const artist of searchResults.body.artists.items) {
           if (
-            artistInfo.body.followers.total > 100000 &&
-            artistInfo.body.images[0]
+            artist.followers.total > 100000 && // Only popular artists
+            artist.images.length > 0 && // Must have an image
+            !artistIds.has(artist.id)
           ) {
+            artistIds.add(artist.id);
             artists.push({
               id: artist.id,
               name: artist.name,
               // Estimate monthly listeners based on follower count
               monthlyListeners: Math.floor(
-                artistInfo.body.followers.total * (Math.random() * 3 + 2)
+                artist.followers.total * (Math.random() * 3 + 2)
               ),
-              imageUrl: artistInfo.body.images[0].url,
+              imageUrl: artist.images[0].url,
             });
           }
+
+          if (artists.length >= 20) break;
         }
 
         if (artists.length >= 20) break;
+      } catch (error) {
+        console.error(`Error searching for term ${term}:`, error);
+        continue;
       }
+    }
 
-      if (artists.length >= 20) break;
+    if (artists.length < 2) {
+      throw new Error("No se pudieron obtener suficientes artistas");
     }
 
     // Shuffle the array of artists

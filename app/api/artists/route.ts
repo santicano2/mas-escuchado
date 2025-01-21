@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { getTopArtists } from "@/lib/spotify";
+import { getTopLatinArtists } from "@/lib/spotify";
 
 export async function GET() {
   try {
-    const artists = await getTopArtists();
+    const artists = await getTopLatinArtists();
     return NextResponse.json(artists);
   } catch (error) {
     console.error("Error in artists API route:", error);

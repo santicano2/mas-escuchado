@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Music2 } from "lucide-react";
 
@@ -48,7 +47,7 @@ export function ArtistCard({
 
   return (
     <div className="relative w-full h-[400px] overflow-hidden rounded-lg">
-      <Image
+      <img
         src={artist.imageUrl}
         alt={artist.name}
         className="absolute inset-0 w-full h-full object-cover"
