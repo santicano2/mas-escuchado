@@ -2,12 +2,11 @@
 
 import { ArtistCard } from "./ArtistCard";
 import { GuessButtons } from "./GuessButtons";
-
-import { Artist } from "@/data/artists";
+import { SpotifyArtist } from "../lib/spotify";
 
 interface GameLayoutProps {
-  currentArtist: Artist;
-  nextArtist: Artist;
+  currentArtist: SpotifyArtist;
+  nextArtist: SpotifyArtist;
   showNextListeners: boolean;
   isRevealing: boolean;
   onGuess: (higher: boolean) => void;
