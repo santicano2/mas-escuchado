@@ -32,19 +32,51 @@ export interface SpotifyArtist {
   id: string;
 }
 
-// List of search terms to get diverse artists
 const searchTerms = [
-  "pop",
-  "rock",
-  "hip hop",
-  "jazz",
-  "electronic",
-  "indie",
-  "latin",
-  "r&b",
-  "dance",
-  "alternative",
+  "top hits",
+  "chart hits",
+  "viral hits",
+  "pop stars",
+  "rap stars",
+  "rock stars",
+  "latin hits",
+  "global hits",
+  "trending",
 ];
+
+function calculateMonthlyListeners(
+  followers: number,
+  popularity: number
+): number {
+  // Base calculation using followers and popularity
+  // Popularity is a value between 0-100 from Spotify
+  const popularityFactor = Math.pow(1.1, popularity / 10); // Exponential growth with popularity
+  const baseListeners = followers * popularityFactor;
+
+  // Add randomness but keep it within realistic bounds
+  const randomVariation = 0.9 + Math.random() * 0.2; // ±10% variation
+  let listeners = Math.floor(baseListeners * randomVariation);
+
+  // Establish realistic bounds based on follower count
+  if (followers > 20_000_000) {
+    // Superstar artists
+    listeners = Math.min(Math.max(listeners, 30_000_000), 80_000_000);
+  } else if (followers > 10_000_000) {
+    // Major artists
+    listeners = Math.min(Math.max(listeners, 15_000_000), 40_000_000);
+  } else if (followers > 5_000_000) {
+    // Well-known artists
+    listeners = Math.min(Math.max(listeners, 8_000_000), 20_000_000);
+  } else if (followers > 1_000_000) {
+    // Established artists
+    listeners = Math.min(Math.max(listeners, 2_000_000), 10_000_000);
+  } else {
+    // Emerging artists
+    listeners = Math.min(Math.max(listeners, 500_000), 3_000_000);
+  }
+
+  return listeners;
+}
 
 export async function getTopLatinArtists(): Promise<SpotifyArtist[]> {
   await getAccessToken();
@@ -52,33 +84,29 @@ export async function getTopLatinArtists(): Promise<SpotifyArtist[]> {
   try {
     const artists: SpotifyArtist[] = [];
     const artistIds = new Set<string>();
+    const shuffledTerms = [...searchTerms].sort(() => Math.random() - 0.5);
 
-    // Shuffle search terms
-    const shuffledTerms = [...searchTerms]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 5); // Use only 5 random terms
-
-    // Search artists for each term
     for (const term of shuffledTerms) {
       try {
         const searchResults = await spotifyApi.searchArtists(term, {
-          limit: 10,
-          market: "ES",
+          limit: 30,
+          market: "US",
         });
 
         for (const artist of searchResults.body.artists.items) {
           if (
-            artist.followers.total > 100000 && // Only popular artists
-            artist.images.length > 0 && // Must have an image
+            artist.followers.total > 1_000_000 && // Minimum 1M followers
+            artist.popularity > 70 && // Only highly popular artists
+            artist.images.length > 0 &&
             !artistIds.has(artist.id)
           ) {
             artistIds.add(artist.id);
             artists.push({
               id: artist.id,
               name: artist.name,
-              // Estimate monthly listeners based on follower count
-              monthlyListeners: Math.floor(
-                artist.followers.total * (Math.random() * 3 + 2)
+              monthlyListeners: calculateMonthlyListeners(
+                artist.followers.total,
+                artist.popularity
               ),
               imageUrl: artist.images[0].url,
             });
@@ -99,12 +127,7 @@ export async function getTopLatinArtists(): Promise<SpotifyArtist[]> {
     }
 
     // Shuffle the array of artists
-    for (let i = artists.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [artists[i], artists[j]] = [artists[j], artists[i]];
-    }
-
-    return artists;
+    return artists.sort(() => Math.random() - 0.5);
   } catch (error) {
     console.error("Error fetching artists:", error);
     throw error;

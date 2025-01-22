@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 import { SpotifyArtist } from "@/lib/spotify";
 
-import { LoadingScreen } from "@/components/LoadingScreen";
-import { ErrorScreen } from "@/components/ErrorScreen";
-import { GameOverScreen } from "@/components/GameOverScreen";
 import { ScoreDisplay } from "@/components/ScoreDisplay";
 import { GameLayout } from "@/components/GameLayout";
+import { GameOverScreen } from "@/components/GameOverScreen";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { ErrorScreen } from "@/components/ErrorScreen";
+import { StartMenu } from "@/components/StartMenu";
 
 export default function Home() {
   const [artists, setArtists] = useState<SpotifyArtist[]>([]);
@@ -20,33 +21,26 @@ export default function Home() {
   const [showNextListeners, setShowNextListeners] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+
+  const fetchArtists = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/artists");
+      if (!response.ok) throw new Error("Error al cargar los artistas");
+      const data = await response.json();
+      setArtists(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchArtists() {
-      try {
-        const response = await fetch("/api/artists");
-        if (!response.ok) throw new Error("Error al cargar los artistas");
-        const data = await response.json();
-        setArtists(data);
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error desconocido");
-        setLoading(false);
-      }
-    }
     fetchArtists();
   }, []);
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  if (error || artists.length < 2) {
-    return <ErrorScreen error={error} />;
-  }
-
-  const currentArtist = artists[currentIndex];
-  const nextArtist = artists[nextIndex];
 
   const handleGuess = (higher: boolean) => {
     setIsRevealing(true);
@@ -72,7 +66,9 @@ export default function Home() {
     }, 2000);
   };
 
-  const resetGame = () => {
+  const resetGame = async () => {
+    setLoading(true);
+    await fetchArtists();
     setScore(0);
     setCurrentIndex(0);
     setNextIndex(1);
@@ -81,9 +77,24 @@ export default function Home() {
     setIsRevealing(false);
   };
 
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (error || artists.length < 2) {
+    return <ErrorScreen error={error} />;
+  }
+
   if (gameOver) {
     return <GameOverScreen score={score} onReset={resetGame} />;
   }
+
+  if (!gameStarted) {
+    return <StartMenu onStart={() => setGameStarted(true)} />;
+  }
+
+  const currentArtist = artists[currentIndex];
+  const nextArtist = artists[nextIndex];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 to-blue-900">
